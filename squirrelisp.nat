@@ -27,6 +27,7 @@ function makeSym(str) {
 sym_t <- makeSym("t");
 sym_quote <- makeSym("quote");
 sym_if <- makeSym("if");
+sym_lambda <- makeSym("lambda");
 
 class Error {
   constructor(s) { data = s; }
@@ -65,6 +66,10 @@ class Expr {
   env = kNil;
 }
 
+function makeExpr(args, env) {
+  return Expr(safeCar(args), safeCdr(args), env);
+}
+
 function nreverse(lst) {
   local ret = kNil;
   while (lst instanceof Cons) {
@@ -74,6 +79,16 @@ function nreverse(lst) {
     lst = tmp;
   }
   return ret;
+}
+
+function pairlis(lst1, lst2) {
+  local ret = kNil;
+  while (lst1 instanceof Cons && lst2 instanceof Cons) {
+    ret = Cons(Cons(lst1.car, lst2.car), ret);
+    lst1 = lst1.cdr;
+    lst2 = lst2.cdr;
+  }
+  return nreverse(ret);
 }
 
 function isSpace(c) {
@@ -225,6 +240,8 @@ function eval(obj, env) {
       return eval(safeCar(safeCdr(safeCdr(args))), env);
     }
     return eval(safeCar(safeCdr(args)), env);
+  } else if (op == sym_lambda) {
+    return makeExpr(args, env);
   }
   return apply(eval(op, env), evlis(args, env));
 }
@@ -240,6 +257,15 @@ function evlis(lst, env) {
   return nreverse(ret);
 }
 
+function progn(body, env) {
+  local ret = kNil;
+  while (body instanceof Cons) {
+    ret = eval(body.car, env);
+    body = body.cdr;
+  }
+  return ret;
+}
+
 function apply(fn, args) {
   if (fn instanceof Error) {
     return fn;
@@ -247,6 +273,8 @@ function apply(fn, args) {
     return args;
   } else if (fn instanceof Subr) {
     return fn.fn(args);
+  } else if (fn instanceof Expr) {
+    return progn(fn.body, Cons(pairlis(fn.args, args), fn.env));
   }
   return Error(printObj(fn) + " is not function");
 }
