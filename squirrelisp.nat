@@ -24,6 +24,7 @@ function makeSym(str) {
   return sym_table[str];
 }
 
+sym_t <- makeSym("t");
 sym_quote <- makeSym("quote");
 
 class Error {
@@ -181,6 +182,41 @@ function printList(obj) {
   return "(" + ret + " . " + printObj(obj) + ")"
 }
 
+function findVar(sym, env) {
+  while (env instanceof Cons) {
+    local alist = env.car;
+    while (alist instanceof Cons) {
+      if (alist.car.car == sym) {
+        return alist.car;
+      }
+      alist = alist.cdr;
+    }
+    env = env.cdr;
+  }
+  return kNil;
+}
+
+g_env <- Cons(kNil, kNil);
+
+function addToEnv(sym, val, env) {
+  env.car = Cons(Cons(sym, val), env.car);
+}
+
+function eval(obj, env) {
+  if (obj instanceof Nil || obj instanceof Num || obj instanceof Error) {
+    return obj;
+  } else if (obj instanceof Sym) {
+    local bind = findVar(obj, env);
+    if (bind == kNil) {
+      return Error(obj.data + " has no value");
+    }
+    return bind.cdr;
+  }
+  return Error("noimpl");
+}
+
+addToEnv(sym_t, sym_t, g_env);
+
 function readLine() {
   local c, line = "";
   while ((c = stdin.readn('c')) != '\n') {
@@ -193,7 +229,7 @@ try {
   while (true) {
     print("> ");
     local line = readLine();
-    print(printObj(read(line)[0]));
+    print(printObj(eval(read(line)[0], g_env)));
     print("\n");
   }
 } catch (_) {}
