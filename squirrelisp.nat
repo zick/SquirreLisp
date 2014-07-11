@@ -26,6 +26,7 @@ function makeSym(str) {
 
 sym_t <- makeSym("t");
 sym_quote <- makeSym("quote");
+sym_if <- makeSym("if");
 
 class Error {
   constructor(s) { data = s; }
@@ -212,9 +213,59 @@ function eval(obj, env) {
     }
     return bind.cdr;
   }
-  return Error("noimpl");
+
+  local op = safeCar(obj);
+  local args = safeCdr(obj);
+  if (op == sym_quote) {
+    return safeCar(args);
+  } else if (op == sym_if) {
+    local c = eval(safeCar(args), env);
+    if (c instanceof Error) { return c; }
+    if (c == kNil) {
+      return eval(safeCar(safeCdr(safeCdr(args))), env);
+    }
+    return eval(safeCar(safeCdr(args)), env);
+  }
+  return apply(eval(op, env), evlis(args, env));
 }
 
+function evlis(lst, env) {
+  local ret = kNil;
+  while (lst instanceof Cons) {
+    local elm = eval(lst.car, env);
+    if (elm instanceof Error) { return elm; }
+    ret = Cons(elm, ret);
+    lst = lst.cdr;
+  }
+  return nreverse(ret);
+}
+
+function apply(fn, args) {
+  if (fn instanceof Error) {
+    return fn;
+  } else if (args instanceof Error) {
+    return args;
+  } else if (fn instanceof Subr) {
+    return fn.fn(args);
+  }
+  return Error(printObj(fn) + " is not function");
+}
+
+function subrCar(args) {
+  return safeCar(safeCar(args));
+}
+
+function subrCdr(args) {
+  return safeCdr(safeCar(args));
+}
+
+function subrCons(args) {
+  return Cons(safeCar(args), safeCar(safeCdr(args)));
+}
+
+addToEnv(makeSym("car"), Subr(subrCar), g_env);
+addToEnv(makeSym("cdr"), Subr(subrCdr), g_env);
+addToEnv(makeSym("cons"), Subr(subrCons), g_env);
 addToEnv(sym_t, sym_t, g_env);
 
 function readLine() {
