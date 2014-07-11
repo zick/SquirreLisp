@@ -309,9 +309,84 @@ function subrCons(args) {
   return Cons(safeCar(args), safeCar(safeCdr(args)));
 }
 
+function subrEq(args) {
+  local x = safeCar(args);
+  local y = safeCar(safeCdr(args));
+  if (x instanceof Num && y instanceof Num) {
+    if (x.data == y.data) {
+      return sym_t;
+    } else {
+      return kNil;
+    }
+  } else if (x == y) {
+    return sym_t;
+  }
+  return kNil;
+}
+
+function subrAtom(args) {
+  if (safeCar(args) instanceof Cons) {
+    return kNil;
+  }
+  return sym_t;
+}
+
+function subrNumberp(args) {
+  if (safeCar(args) instanceof Num) {
+    return sym_t;
+  }
+  return kNil;
+}
+
+function subrSymbolp(args) {
+  if (safeCar(args) instanceof Sym) {
+    return sym_t;
+  }
+  return kNil;
+}
+
+function subrAddOrMul(fn, init_val) {
+  return function(args) {
+    local ret = init_val;
+    while (args instanceof Cons) {
+      if (!(safeCar(args) instanceof Num)) {
+        return Error("wrong type");
+      }
+      ret = fn(ret, safeCar(args).data);
+      args = args.cdr;
+    }
+    return Num(ret);
+  }
+}
+subrAdd <- subrAddOrMul(function(x, y) { return x + y; }, 0);
+subrMul <- subrAddOrMul(function(x, y) { return x * y; }, 1);
+
+function subrSubOrDivOrMod(fn) {
+  return function(args) {
+    local x = safeCar(args);
+    local y = safeCar(safeCdr(args));
+    if (!(x instanceof Num) || !(y instanceof Num)) {
+      return Error("wrong type");
+    }
+    return Num(fn(x.data, y.data));
+  }
+}
+subrSub <- subrSubOrDivOrMod(function(x, y) { return x - y; });
+subrDiv <- subrSubOrDivOrMod(function(x, y) { return x / y; });
+subrMod <- subrSubOrDivOrMod(function(x, y) { return x % y; });
+
 addToEnv(makeSym("car"), Subr(subrCar), g_env);
 addToEnv(makeSym("cdr"), Subr(subrCdr), g_env);
 addToEnv(makeSym("cons"), Subr(subrCons), g_env);
+addToEnv(makeSym("eq"), Subr(subrEq), g_env);
+addToEnv(makeSym("atom"), Subr(subrAtom), g_env);
+addToEnv(makeSym("numberp"), Subr(subrNumberp), g_env);
+addToEnv(makeSym("symbolp"), Subr(subrSymbolp), g_env);
+addToEnv(makeSym("+"), Subr(subrAdd), g_env);
+addToEnv(makeSym("*"), Subr(subrMul), g_env);
+addToEnv(makeSym("-"), Subr(subrSub), g_env);
+addToEnv(makeSym("/"), Subr(subrDiv), g_env);
+addToEnv(makeSym("mod"), Subr(subrMod), g_env);
 addToEnv(sym_t, sym_t, g_env);
 
 function readLine() {
