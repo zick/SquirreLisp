@@ -29,6 +29,7 @@ sym_quote <- makeSym("quote");
 sym_if <- makeSym("if");
 sym_lambda <- makeSym("lambda");
 sym_defun <- makeSym("defun");
+sym_setq <- makeSym("setq");
 
 class Error {
   constructor(s) { data = s; }
@@ -248,6 +249,17 @@ function eval(obj, env) {
     local sym = safeCar(args);
     addToEnv(sym, expr, g_env);
     return sym;
+  } else if (op == sym_setq) {
+    local val = eval(safeCar(safeCdr(args)), env);
+    if (val instanceof Error) { return val; }
+    local sym = safeCar(args);
+    local bind = findVar(sym, env);
+    if (bind == kNil) {
+      addToEnv(sym, val, env);
+    } else {
+      bind.cdr = val;
+    }
+    return val;
   }
   return apply(eval(op, env), evlis(args, env));
 }
