@@ -1,0 +1,149 @@
+kLPar <- '(';
+kRPar <- ')';
+kQuote <- '\'';
+
+class Nil {
+}
+kNil <- Nil();
+
+class Num {
+  constructor(n) { data = n; }
+  data = 0;
+}
+
+class Sym {
+  constructor(s) { data = s; }
+  data = "";
+}
+
+sym_table <- { nil = kNil };
+function makeSym(str) {
+  if (!(str in sym_table)) {
+    sym_table[str] <- Sym(str);
+  }
+  return sym_table[str];
+}
+
+class Error {
+  constructor(s) { data = s; }
+  data = "";
+}
+
+class Cons {
+  constructor(a, d) { car = a; cdr = d; }
+  car = kNil;
+  cdr = kNil;
+}
+
+function safeCar(obj) {
+  if (obj instanceof Cons) {
+    return obj.car;
+  }
+  return kNil;
+}
+
+function safeCdr(obj) {
+  if (obj instanceof Cons) {
+    return obj.cdr;
+  }
+  return kNil;
+}
+
+class Subr {
+  constructor(f) { fn = f; }
+  fn = kNil;
+}
+
+class Expr {
+  constructor(a, b, e) { args = a; body = b; env = e; }
+  args = kNil;
+  body = kNil;
+  env = kNil;
+}
+
+function isSpace(c) {
+  return c == '\t' || c == '\r' || c == '\n' || c == ' ';
+}
+
+function isDelimiter(c) {
+  return c == kLPar || c == kRPar || c == kQuote || isSpace(c);
+}
+
+function skipSpaces(str) {
+  local i;
+  for (i = 0; i < str.len(); i++) {
+    if (!isSpace(str[i])) {
+      break;
+    }
+  }
+  return str.slice(i);
+}
+
+function makeNumOrSym(str) {
+  try {
+    return Num(str.tointeger());
+  } catch (_) {
+    return makeSym(str);
+  }
+}
+
+function readAtom(str) {
+  local next = "";
+  for (local i = 0; i < str.len(); i++) {
+    if (isDelimiter(str[i])) {
+      next = str.slice(i);
+      str = str.slice(0, i);
+    }
+  }
+  return [makeNumOrSym(str), next];
+}
+
+function read(str) {
+  str = skipSpaces(str);
+  if (str.len() == 0) {
+    return [Error("empty input"), ""];
+  } else if (str[0] == kRPar) {
+    return [Error("invalid syntax: " + str), ""];
+  } else if (str[0] == kLPar) {
+    return [Error("noimpl"), ""];
+  } else if (str[0] == kQuote) {
+    return [Error("noimpl"), ""];
+  }
+  return readAtom(str);
+}
+
+function printObj(obj) {
+  if (obj instanceof Nil) {
+    return "nil";
+  } else if (obj instanceof Num) {
+    return obj.data.tostring();
+  } else if (obj instanceof Sym) {
+    return obj.data;
+  } else if (obj instanceof Error) {
+    return "<error: " + obj.data + ">";
+  } else if (obj instanceof Cons) {
+    return "CONS";
+  } else if (obj instanceof Subr) {
+    return "<subr>";
+  } else if (obj instanceof Expr) {
+    return "<expr>";
+  }
+  return "<unknown>"
+}
+
+function readLine() {
+  local c, line = "";
+  while ((c = stdin.readn('c')) != '\n') {
+    line = format("%s%c", line, c);
+  }
+  return line;
+}
+
+try {
+  while (true) {
+    print("> ");
+    local line = readLine();
+    print(printObj(read(line)[0]));
+    print("\n");
+  }
+} catch (_) {}
