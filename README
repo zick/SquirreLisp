@@ -5,7 +5,7 @@ Lisp implementation in Squirrel.
 
 == How to use
 
-% sq squirrelisp.nat
+% sq squirrelisp.nut
 > (car '(a b c))
 a
 > (cdr '(a b c))
